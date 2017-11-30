@@ -57,6 +57,7 @@ func (a App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func main() {
 	debug := flag.Bool("debug", false, "Enable debug mode.")
 	assets := flag.String("assets", "./assets", "Directory for static assets like images, css, and one day templates.")
+	images := flag.String("images", "./images", "Direcotry containging images served from /images/ url.")
 	flag.Parse()
 
 	debugWriter := func() io.Writer {
@@ -75,7 +76,7 @@ func main() {
 	app := &App{
 		debug:       log.New(debugWriter(), "DEBUG ", log.LstdFlags|log.Lshortfile),
 		fileServer:  http.StripPrefix("/assets", http.FileServer(http.Dir(*assets))),
-		imageServer: http.StripPrefix("/images", http.FileServer(http.Dir(path.Join(*assets, "images")))),
+		imageServer: http.StripPrefix("/images", http.FileServer(http.Dir(path.Join(*images)))),
 		tmpl:        tmpl,
 	}
 
