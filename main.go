@@ -2,7 +2,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"log"
@@ -17,6 +17,7 @@ type App struct {
 	debug       *log.Logger
 	fileServer  http.Handler
 	imageServer http.Handler
+	tmpl        *template.Template
 }
 
 func (a App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -42,26 +43,12 @@ func (a App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		a.fileServer.ServeHTTP(w, r)
 
 	case r.URL.Path == "/":
-		fmt.Fprint(w, `<!DOCTYPE html>
-<html>
-	<head>
-	</head>
-		<body style='background: #303030; margin-left: 10%; margin-right: 10%; color: white;'>
-		<div style='position: relative;'>
-				<img src='/assets/static/bcdc-logo.png' style='width: 25%;' />
-				<br />
-				<p>
-					Thank you for your support.  We are currently closed for business.
-					We will probably re-open to sell our handguard grip tape accessories
-					by January.  We <i>might</i> resume selling guns and accessories by
-					2019.
-				</p>
-			</div>
-		</div>
-		<p>
-		</p>
-	</body>
-</html>`)
+		err := a.tmpl.ExecuteTemplate(w, "index.html", nil)
+
+		if err != nil {
+			a.debug.Printf("%v", err)
+		}
+
 	default:
 		http.Redirect(w, r, "/", 307)
 	}
@@ -79,10 +66,17 @@ func main() {
 		return ioutil.Discard
 	}
 
+	tmpl, err := template.ParseGlob(path.Join(*assets, "templates/*"))
+
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
 	app := &App{
 		debug:       log.New(debugWriter(), "DEBUG ", log.LstdFlags|log.Lshortfile),
 		fileServer:  http.StripPrefix("/assets", http.FileServer(http.Dir(*assets))),
 		imageServer: http.StripPrefix("/images", http.FileServer(http.Dir(path.Join(*assets, "images")))),
+		tmpl:        tmpl,
 	}
 
 	server := http.Server{
